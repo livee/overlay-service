@@ -1,0 +1,7 @@
+/config/local-*
+/node_modules
+/coverage
+*.log
+/build
+*vault/file
+*vault/logs

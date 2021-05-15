@@ -1,0 +1,11 @@
+{
+    "name": "overlay-service",
+    "server": {
+        "host": "",
+        "port": 0
+    },
+    "logger": {
+        "level": "warn",
+        "transports": [ "dailyRotateFile" ]
+    }
+}
