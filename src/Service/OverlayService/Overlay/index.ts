@@ -37,7 +37,6 @@ class Overlay extends EventEmitter {
                 height: this._DEFAULT_HEIGHT,
                 isLandscape: true
             }
-
         });
         this._page = await this._browser.newPage();
 
