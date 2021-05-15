@@ -80,8 +80,7 @@ class Overlay extends EventEmitter {
     }
 
     private isReady = (data: Buffer) => {
-        // TODO: fix to another pattern
-        if (!data.toString().match(/ rawvideo/)) {
+        if (!data.toString().match(/Input #0, rawvideo/)) {
             return;
         }
 
