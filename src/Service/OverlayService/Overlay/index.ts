@@ -211,6 +211,7 @@ class Overlay extends EventEmitter {
             // @ts-ignore
             logger.debug(
                 'need to wait drain event: ',
+                // @ts-ignore
                 this._ffmpeg?.stdin.writableNeedDrain,
                 this._ffmpeg?.stdin.writableHighWaterMark
             );
