@@ -5,8 +5,16 @@ import { spawn, ChildProcess } from 'child_process';
 import { Browser, Page, launch } from 'puppeteer';
 // @ts-ignore
 import { PNG } from 'pngjs';
+import * as fp from 'find-free-port';
 
 import { LoggerWithContext } from '@src/Logger/LoggerWithContext';
+
+export interface OverlayData {
+    width: number;
+    height: number;
+    host: string;
+    port: number;
+}
 
 class Overlay extends EventEmitter {
     private readonly _DEFAULT_WIDTH = 1280;
@@ -16,27 +24,26 @@ class Overlay extends EventEmitter {
 
     private _ffmpeg: null | ChildProcess = null;
     private _launchTimeout: null | ReturnType<typeof setTimeout> = null;
-    private _listenIp = '127.0.0.1';
+    private _host = '127.0.0.1';
     private _port: null | number = null;
     private _browser: null | Browser = null;
     private _page: null | Page = null;
     private _readyToStopBrowser = false;
     private _stopped = false;
 
-    constructor(
-        private readonly _url: string,
-        private readonly _logger: LoggerWithContext
-    ) {
+    constructor(private readonly _url: string, private readonly _logger: LoggerWithContext) {
         super();
     }
 
-    async run(): Promise<{ port: number }> {
+    async run(): Promise<OverlayData> {
+        this._port = await this.availablePort();
+
         this._browser = await launch({
             defaultViewport: {
                 width: this._DEFAULT_WIDTH,
                 height: this._DEFAULT_HEIGHT,
-                isLandscape: true
-            }
+                isLandscape: true,
+            },
         });
         this._page = await this._browser.newPage();
 
@@ -48,8 +55,15 @@ class Overlay extends EventEmitter {
             this.emit('exit', new Error('Launch timeout'));
         }, this._LAUNCH_TIMEOUT_MS);
 
+        const viewport = this._page!.viewport();
+
+        const width = viewport?.width || this._DEFAULT_WIDTH;
+        const height = viewport?.height || this._DEFAULT_HEIGHT;
+
         // TODO: use config for ffmpeg path
-        this._ffmpeg = spawn('ffmpeg', this.ffmpegOptions(), { detached: false });
+        this._ffmpeg = spawn('ffmpeg', this.buildFFMPEGOptions({ width, height, host: this._host, port: this._port }), {
+            detached: false,
+        });
         this._ffmpeg.on('exit', this.onFFMPEGExit);
         this._ffmpeg.on('error', this.onFFMPEGError);
 
@@ -59,7 +73,12 @@ class Overlay extends EventEmitter {
         this.updateStreamWithBrowserData();
 
         assert(this._port!, 'Invalid port');
-        return { port: this._port! };
+        return {
+            width: this._DEFAULT_WIDTH,
+            height: this._DEFAULT_HEIGHT,
+            host: this._host,
+            port: this._port!,
+        };
     }
 
     async stop() {
@@ -76,7 +95,7 @@ class Overlay extends EventEmitter {
 
     private debug = (data: Buffer) => {
         this._logger.debug('[ffmpeg] output: ', data.toString());
-    }
+    };
 
     private isReady = (data: Buffer) => {
         if (!data.toString().match(/Input #0, rawvideo/)) {
@@ -90,7 +109,7 @@ class Overlay extends EventEmitter {
         clearTimeout(this._launchTimeout!);
 
         this.emit('started');
-    }
+    };
 
     private onFFMPEGError = async (error: Error) => {
         await this._stop();
@@ -123,8 +142,6 @@ class Overlay extends EventEmitter {
         }
 
         assert(this._browser, 'Invalid browser instance');
-        // sleep before close browser (some puppeteer bug)
-        await this.sleep(5 * 1000);
         await this._browser!.close();
         this._browser = null;
 
@@ -159,7 +176,7 @@ class Overlay extends EventEmitter {
 
             logger.debug('done');
         });
-    }
+    };
 
     private makeStreamScreenshotAndWriteToStream = async () => {
         const logger = this._logger.create(`[makeStreamScreenshotAndWriteToStream]({ url: ${this._url} })`);
@@ -172,7 +189,7 @@ class Overlay extends EventEmitter {
 
         assert(this._page, 'Invalid browser page');
         const pageScreenshot = await this._page!.screenshot({
-            omitBackground: true
+            omitBackground: true,
         });
 
         if (this._stopped) {
@@ -181,7 +198,7 @@ class Overlay extends EventEmitter {
 
         logger.debug('got page screenshot');
 
-        const image = await this.generateImage(pageScreenshot as Buffer)
+        const image = await this.generateImage(pageScreenshot as Buffer);
 
         if (this._stopped) {
             return;
@@ -192,27 +209,32 @@ class Overlay extends EventEmitter {
         assert(this._ffmpeg, 'Invalid ffmpeg instance');
         if (!this._ffmpeg!.stdin.write(image)) {
             // @ts-ignore
-            logger.debug('need to wait drain event: ', this._ffmpeg?.stdin.writableNeedDrain, this._ffmpeg?.stdin.writableHighWaterMark);
+            logger.debug(
+                'need to wait drain event: ',
+                this._ffmpeg?.stdin.writableNeedDrain,
+                this._ffmpeg?.stdin.writableHighWaterMark
+            );
 
             await this.drain();
         }
 
         logger.debug('wrote to stream');
-    }
+    };
 
-    private ffmpegOptions() {
-        assert(this._page, 'Invalid browser page');
-        const viewport = this._page!.viewport();
-
-        // TODO:
-        this._port = 3333;
-
-        const width = this._DEFAULT_WIDTH;
-        const height = this._DEFAULT_HEIGHT;
-
+    private buildFFMPEGOptions({
+        width,
+        height,
+        host,
+        port,
+    }: {
+        width: number;
+        height: number;
+        host: string;
+        port: number;
+    }) {
         return [
             '-s',
-            [viewport?.width || width, viewport?.height || height].join('x'),
+            [width, height].join('x'),
             '-f',
             'rawvideo',
             '-pix_fmt',
@@ -227,7 +249,7 @@ class Overlay extends EventEmitter {
             [width, height].join('x'),
             '-pix_fmt',
             'yuva420p',
-            `tcp://${this._listenIp}:${this._port}?listen=1`
+            `tcp://${host}:${port}?listen=1`,
         ];
     }
 
@@ -238,12 +260,12 @@ class Overlay extends EventEmitter {
             }, 5000);
 
             new PNG({ filterType: 4 })
-                .on("parsed", (data: Buffer) => {
+                .on('parsed', (data: Buffer) => {
                     clearTimeout(timeout);
 
                     return resolve(data);
                 })
-                .on("error", (error: Error) => {
+                .on('error', (error: Error) => {
                     clearTimeout(timeout);
 
                     return reject(error);
@@ -253,24 +275,34 @@ class Overlay extends EventEmitter {
     }
 
     private async sleep(ms: number) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+        return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     private async drain() {
         let drainGuardInterval: null | ReturnType<typeof setInterval> = null;
 
         await Promise.race([
-            new Promise<void>(resolve => this._ffmpeg!.stdin.once('drain', resolve)),
-            new Promise<void>(resolve => {
+            new Promise<void>((resolve) => this._ffmpeg!.stdin.once('drain', resolve)),
+            new Promise<void>((resolve) => {
                 drainGuardInterval = setInterval(() => {
                     if (this._stopped) {
                         resolve();
                     }
                 }, 100);
-            })
+            }),
         ]);
 
         clearInterval(drainGuardInterval!);
+    }
+
+    private async availablePort(): Promise<number> {
+        const minPort = 10000;
+        const maxPort = 20000;
+
+        // @ts-ignore
+        const [port] = await fp(minPort, maxPort);
+
+        return port;
     }
 }
 

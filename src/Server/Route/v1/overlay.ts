@@ -21,9 +21,9 @@ function overlay(logger: LoggerWithContext, overlayService: OverlayService) {
         }
 
         try {
-            await overlayService.run({ url, corrId });
+            const overlayData = await overlayService.run({ url, corrId });
 
-            return res.status(200).json({ code: 0 });
+            return res.status(200).json({ code: 0, payload: overlayData });
         } catch (error) {
             log.error(`Error during running overlay: ${error.message}`, error);
 

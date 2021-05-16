@@ -5,14 +5,12 @@ import * as _ from 'lodash';
 import { LoggerWithContext } from '@src/Logger/LoggerWithContext';
 
 import { OverlayServiceError } from './Error/OverlayServiceError';
-import { Overlay } from './Overlay';
+import { Overlay, OverlayData } from './Overlay';
 
 class OverlayService {
     private _overlays = new Map<string, Overlay>();
 
-    constructor(
-        private readonly _logger: LoggerWithContext
-    ) { }
+    constructor(private readonly _logger: LoggerWithContext) {}
 
     public async deinit() {
         const logger = this._logger.create('[OverlayService::deinit]');
@@ -20,7 +18,7 @@ class OverlayService {
         const overlays = this._overlays.values();
 
         await Promise.all(
-            [...overlays].map(async overlay => {
+            [...overlays].map(async (overlay) => {
                 try {
                     await overlay.stop();
                 } catch (error) {
@@ -30,29 +28,36 @@ class OverlayService {
         );
     }
 
-    public async run(request: { url: string, corrId: string }): Promise<void> {
+    public async run(request: { url: string; corrId: string }): Promise<OverlayData> {
         const logger = this._logger.create(`[OverlayService::run]({ url: ${request.url}, corrId: ${request.corrId} })`);
 
         logger.debug('Start running overlay');
 
         let overlay: null | Overlay = null;
 
+        if (this._overlays.has(request.corrId)) {
+            throw new OverlayServiceError(`Already running overlay for this corrId: ${request.corrId}`);
+        }
+
         try {
-            overlay = new Overlay(request.url, this._logger.create(`[overlay]({ url: ${request.url}, corrId: ${request.corrId} })`));
+            overlay = new Overlay(
+                request.url,
+                this._logger.create(`[overlay]({ url: ${request.url}, corrId: ${request.corrId} })`)
+            );
+
+            this._overlays.set(request.corrId, overlay);
 
             const started = new Promise<void>((resolve, reject) => {
                 assert(overlay, 'Invalid overlay instance');
 
                 overlay!.once('started', () => {
-                    assert(overlay, 'Invalid overlay instance');
-                    overlay!.removeAllListeners();
-
                     logger.debug('overlay process started');
 
                     assert(overlay, 'Invalid overlay instance');
+                    overlay!.removeAllListeners();
                     overlay!.once('exit', (error?: Error) => {
                         assert(overlay, 'Invalid overlay instance');
-                        this.onOverlayExit(overlay!, request, error)
+                        this.onOverlayExit(overlay!, request, error);
                     });
 
                     resolve();
@@ -61,28 +66,30 @@ class OverlayService {
                 overlay!.once('exit', (error: Error = new Error('Cannot start overlay instance')) => {
                     assert(overlay, 'Invalid overlay instance');
                     overlay!.removeAllListeners();
-   
+
                     logger.error(`overlay process start error: ${error.message}`, error);
 
                     reject(error);
                 });
             });
 
-            await overlay.run();
+            const overlayData = await overlay.run();
 
             await started;
 
-            this._overlays.set(request.corrId, overlay);
+            logger.debug(`Overlay for ${request.url} has been started`);
+
+            return overlayData;
         } catch (error) {
             assert(overlay, 'Invalid overlay instance');
             overlay!.removeAllListeners();
+
+            this._overlays.delete(request.corrId);
 
             logger.error(`Error during running overlay: ${error.message}`, error);
 
             throw new OverlayServiceError(`Error during running overlay for ${request.url}: ${error.message}`, error);
         }
-
-        logger.debug(`Overlay for ${request.url} has been started`);
     }
 
     public async stop(request: { corrId: string }): Promise<void> {
@@ -99,10 +106,10 @@ class OverlayService {
             }
 
             overlay.removeAllListeners();
-            
+
             overlay.once('exit', (error?: Error) => {
                 assert(overlay, 'Invalid overlay instance');
-                this.onOverlayExit(overlay!, request, error)
+                this.onOverlayExit(overlay!, request, error);
             });
 
             await overlay.stop();

@@ -23,10 +23,10 @@ NODE_PATH=. NODE_ENV=development node build/src/run --NODE_CONFIG='{"server": {"
 
 ### Run overlay for the room
 ```bash
-curl -d {} -H "Accept: application/json" -H "Content-Type: application/json" -X POST http://localhost:3000/v1/overlay --data '{"url": "https://meet.staging.livee.com:3001/", "corrId": 1}' 
+curl -d {} -H "Accept: application/json" -H "Content-Type: application/json" -X POST http://localhost:3000/v1/overlay --data '{"url": "https://meet.staging.livee.com:3001", "corrId": "1"}'
 ```
 
 ### Stop overlay for the room
 ```bash
-curl -d {} -H "Accept: application/json" -H "Content-Type: application/json" -X DELETE http://localhost:3000/v1/overlay --data '{"corrId": 1}' 
+curl -d {} -H "Accept: application/json" -H "Content-Type: application/json" -X DELETE http://localhost:3000/v1/overlay --data '{"corrId": "1"}'
 ```

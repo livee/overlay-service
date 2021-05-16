@@ -45,14 +45,14 @@ class Server extends EventEmitter {
 
     public start(): Promise<void> {
         return new Promise((resolve, reject) => {
-            this.server.on('error', error => {
+            this.server.on('error', (error) => {
                 reject(error);
             });
 
             this.server.listen(
                 {
                     host: this.config.host,
-                    port: this.config.port
+                    port: this.config.port,
                 },
                 () => {
                     this.logger.info(`server is listening on port ${this.config.port}...`);

@@ -47,10 +47,10 @@ process.on('SIGTERM', async () => {
     application.cleanUp();
 });
 
-process.on('uncaughtException', error => {
+process.on('uncaughtException', (error) => {
     application.getLogger().error('uncaughtException: ', error.message + '. Stack: ' + error.stack);
 });
 
-process.on('unhandledRejection', reason => {
+process.on('unhandledRejection', (reason) => {
     application.getLogger().error('unhandledRejection: ', reason.message + '. Stack: ' + reason.stack);
 });

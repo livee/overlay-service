@@ -21,7 +21,7 @@ const configValidator = (config: object) => {
     });
 
     jsonSchemaValidator.validate(config, applicationSchema, {
-        throwError: true
+        throwError: true,
     });
 };
 

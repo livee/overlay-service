@@ -28,18 +28,18 @@ class Logger extends winston.Logger {
         const transports = {
             console: new winston.transports.Console({
                 colorize: true,
-                timestamp: true
+                timestamp: true,
             }),
             dailyRotateFile: new winston.transports.DailyRotateFile({
                 datePattern: 'YYYY-MM-DD-HH',
                 filename: join(config.path, `${config.appName}-${process.pid}-%DATE%.log`),
-                timestamp: true
-            })
+                timestamp: true,
+            }),
         };
 
         super({
             level: config.level,
-            transports: Object.values(_.pick(transports, config.transports))
+            transports: Object.values(_.pick(transports, config.transports)),
         });
     }
 }

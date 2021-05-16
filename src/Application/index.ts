@@ -16,7 +16,7 @@ interface IConfig {
 }
 
 class ApplicationStatus {
-    constructor(private readonly representation: string) { }
+    constructor(private readonly representation: string) {}
 
     public toJSON(): string {
         return this.representation;
@@ -30,7 +30,7 @@ class Application extends EventEmitter {
             STARTING: new ApplicationStatus('starting'),
             STARTED: new ApplicationStatus('started'),
             STOPPING: new ApplicationStatus('stopping'),
-            STOPPED: new ApplicationStatus('stopped')
+            STOPPED: new ApplicationStatus('stopped'),
         };
     }
 
@@ -53,11 +53,7 @@ class Application extends EventEmitter {
 
         this.overlayService = new OverlayService(this.logger.create('[overlay-service]'));
 
-        this.server = new Server(
-            config.server,
-            this.logger.create('[server]'),
-            this.overlayService
-        );
+        this.server = new Server(config.server, this.logger.create('[server]'), this.overlayService);
 
         this.server.on('error', this.onServerError);
 
@@ -98,7 +94,10 @@ class Application extends EventEmitter {
             await this.overlayService.deinit();
         } catch (error) {
             errors.push(
-                new ApplicationError(`Error during stopping overlay service while stopping application: ${error.message}`, error)
+                new ApplicationError(
+                    `Error during stopping overlay service while stopping application: ${error.message}`,
+                    error
+                )
             );
         }
 
