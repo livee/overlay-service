@@ -5,7 +5,7 @@ import * as _ from 'lodash';
 import { LoggerWithContext } from '@src/Logger/LoggerWithContext';
 
 import { OverlayServiceError } from './Error/OverlayServiceError';
-import { Overlay, OverlayData } from './Overlay';
+import { Overlay, IOverlayData } from './Overlay';
 
 class OverlayService {
     private _overlays = new Map<string, Overlay>();
@@ -28,7 +28,7 @@ class OverlayService {
         );
     }
 
-    public async run(request: { url: string; corrId: string }): Promise<OverlayData> {
+    public async run(request: { url: string; corrId: string }): Promise<IOverlayData> {
         const logger = this._logger.create(`[OverlayService::run]({ url: ${request.url}, corrId: ${request.corrId} })`);
 
         logger.debug('Start running overlay');

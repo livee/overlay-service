@@ -9,7 +9,7 @@ import * as fp from 'find-free-port';
 
 import { LoggerWithContext } from '@src/Logger/LoggerWithContext';
 
-export interface OverlayData {
+export interface IOverlayData {
     width: number;
     height: number;
     host: string;
@@ -35,7 +35,7 @@ class Overlay extends EventEmitter {
         super();
     }
 
-    async run(): Promise<OverlayData> {
+    async run(): Promise<IOverlayData> {
         this._port = await this.availablePort();
 
         this._browser = await launch({
