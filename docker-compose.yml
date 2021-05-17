@@ -5,12 +5,14 @@ services:
     build:
       context: ./
       dockerfile: Dockerfile
+      network: host
       args:
         - LOGGER_PATH=${LOGGER_PATH}
     restart: always
     container_name: overlay-service
+    network_mode: host
     ports:
-        - "4000:80"
+        - "4000:4000"
     expose:
         - "4000"
     env_file:
