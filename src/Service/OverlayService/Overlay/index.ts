@@ -164,12 +164,12 @@ class Overlay extends EventEmitter {
                     this._readyToStopBrowser = false;
 
                     await this.makeStreamScreenshotAndWriteToStream();
-
-                    // don't stop browser until it's logic (screenshot, ...) is done
-                    this._readyToStopBrowser = true;
                 } catch (error) {
                     logger.error(`Error on updating stream with browser data ${error.message}`, error);
                 } finally {
+                    // don't stop browser until it's logic (screenshot, ...) is done
+                    this._readyToStopBrowser = true;
+
                     await this.sleep(10);
                 }
             }
