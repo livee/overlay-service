@@ -7,12 +7,13 @@ import { IConfig as ILoggerServiceConfig, Logger } from '@src/Logger/Logger';
 import { LoggerWithContext } from '@src/Logger/LoggerWithContext';
 import { IConfig as IServerConfig, Server } from '@src/Server';
 import { configValidator } from '@src/Tools';
-import { OverlayService } from '@src/Service/OverlayService';
+import { OverlayService, IConfig as IOverlayConfig } from '@src/Service/OverlayService';
 
 interface IConfig {
     name: string;
     server: IServerConfig;
     logger: ILoggerServiceConfig;
+    overlay: IOverlayConfig;
 }
 
 class ApplicationStatus {
@@ -51,7 +52,10 @@ class Application extends EventEmitter {
             `[overlay-service application ${process.pid}]`
         );
 
-        this.overlayService = new OverlayService(this.logger.create('[overlay-service]'));
+        this.overlayService = new OverlayService(
+            this.config.overlay,
+            this.logger.create('[overlay-service]')
+        );
 
         this.server = new Server(config.server, this.logger.create('[server]'), this.overlayService);
 

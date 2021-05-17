@@ -1,5 +1,7 @@
 import * as assert from 'assert';
+import * as https from 'https';
 
+import axios from 'axios';
 import * as _ from 'lodash';
 
 import { LoggerWithContext } from '@src/Logger/LoggerWithContext';
@@ -7,10 +9,18 @@ import { LoggerWithContext } from '@src/Logger/LoggerWithContext';
 import { OverlayServiceError } from './Error/OverlayServiceError';
 import { Overlay, IOverlayData } from './Overlay';
 
+export interface IConfig {
+    callbackURLStopEvent: string;
+};
+
 class OverlayService {
     private _overlays = new Map<string, Overlay>();
+    private readonly _MAX_AMOUNT_OF_TRIES_TO_NOTIFY_ABOUT_STOP_EVENT = 10;
 
-    constructor(private readonly _logger: LoggerWithContext) {}
+    constructor(
+        private readonly _config: IConfig,
+        private readonly _logger: LoggerWithContext
+    ) {}
 
     public async deinit() {
         const logger = this._logger.create('[OverlayService::deinit]');
@@ -123,11 +133,33 @@ class OverlayService {
     }
 
     private async notifyAboutOverlayStopEvent(corrId: string) {
-        const logger = this._logger.create(`[OverlayService::notifyAboutOverlayStopEvent]({ corrId: ${corrId} })`);
+        return this.doNotifyAboutOverlayStopEvent(corrId);
+    }
 
-        logger.debug('Start notify about overlay stop event');
+    private async doNotifyAboutOverlayStopEvent(corrId: string, tryCounter: number = 0): Promise<void> {
+        const logger = this._logger.create(`[OverlayService::doNotifyAboutOverlayStopEvent]({ corrId: ${corrId}, tryCounter: ${tryCounter} })`);
 
-        // send callback request
+        logger.debug(`Start notify about overlay stop event. Try number: ${tryCounter}`);
+
+        if (tryCounter >= this._MAX_AMOUNT_OF_TRIES_TO_NOTIFY_ABOUT_STOP_EVENT) {
+            logger.error(`Reached max amount of tries on notifying about overlay process stop event: ${tryCounter}`);
+
+            return;
+        }
+
+        try {
+            await axios({
+                method: 'DELETE',
+                url: this._config.callbackURLStopEvent,
+                data: { corrId }
+            });
+        } catch (error) {
+            logger.error(`Error on notifying about overlay process stop event: ${error.message}`, error);
+
+            await this.sleep(tryCounter * 1000);
+
+            return await this.doNotifyAboutOverlayStopEvent(corrId, tryCounter + 1);
+        }
     }
 
     private async onOverlayExit(overlay: Overlay, request: { corrId: string }, error?: Error) {
@@ -144,6 +176,9 @@ class OverlayService {
         this._overlays.delete(request.corrId);
 
         await this.notifyAboutOverlayStopEvent(request.corrId);
+    }
+    private async sleep(ms: number) {
+        return new Promise(resolve => setTimeout(resolve, ms));
     }
 }
 

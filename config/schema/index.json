@@ -4,7 +4,8 @@
     "required": [
         "name",
         "server",
-        "logger"
+        "logger",
+        "overlay"
     ],
     "properties": {
         "name": {
@@ -16,6 +17,9 @@
         },
         "logger": {
             "$ref": "/logger"
+        },
+        "overlay": {
+            "$ref": "/overlay"
         }
     },
     "additionalProperties": false

@@ -8,5 +8,8 @@
         "level": "debug",
         "transports": [ "dailyRotateFile" ],
         "path": ""
+    },
+    "overlay": {
+        "callbackURLStopEvent": ""
     }
 }
