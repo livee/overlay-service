@@ -34,6 +34,8 @@ class Logger extends winston.Logger {
                 datePattern: 'YYYY-MM-DD-HH',
                 filename: join(config.path, `${config.appName}-${process.pid}-%DATE%.log`),
                 timestamp: true,
+                maxSize: '20m',
+                maxFiles: '14d'
             }),
         };
 

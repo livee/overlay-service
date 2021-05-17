@@ -1,0 +1,19 @@
+# docker-compose.yml
+version: '3.4'
+services:
+  overlay-service:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        - LOGGER_PATH=${LOGGER_PATH}
+    restart: always
+    container_name: overlay-service
+    ports:
+        - "4000:80"
+    expose:
+        - "4000"
+    env_file:
+        - .env
+    volumes:
+        - ${LOGGER_PATH}:${LOGGER_PATH}

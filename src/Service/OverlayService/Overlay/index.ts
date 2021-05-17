@@ -39,6 +39,8 @@ class Overlay extends EventEmitter {
         this._port = await this.availablePort();
 
         this._browser = await launch({
+            executablePath: process.env.CHROME_BIN,
+            args: ['--no-sandbox', '--headless', '--disable-gpu'],
             defaultViewport: {
                 width: this._DEFAULT_WIDTH,
                 height: this._DEFAULT_HEIGHT,
