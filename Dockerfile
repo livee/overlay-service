@@ -3,7 +3,7 @@ FROM node:15.14.0-alpine
 RUN echo @edge http://nl.alpinelinux.org/alpine/edge/community >> /etc/apk/repositories && \
     echo @edge http://nl.alpinelinux.org/alpine/edge/main >> /etc/apk/repositories && \
     apk update && \
-    apk add --no-cache ffmpeg bash chromium@edge nss@edge
+    apk add --no-cache ffmpeg bash chromium nss@edge
 
 ARG LOGGER_PATH
 
